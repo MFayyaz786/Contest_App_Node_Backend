@@ -1,20 +1,21 @@
+const mongoose=require("mongoose")
 const ContestSchema = new mongoose.Schema({
-  rounds: {
+  contestSpace:{
+    type:Number,
+    enum:[5,25,60],
+    //contest space will be 5 or 35 or 60 hours
+  },
+  roundPerContest: {
     type: Number,
     required: true,
     default: 4,
   },
-  roomsPerRound: {
+  roomsPerContest: {
     type: Number,
     required: true,
     default: 256,
   },
-  maxParticipantsPerRoom: {
-    type: Number,
-    required: true,
-    default: 4,
-  },
-  timePerRound: {
+  roundSpace: {
     type: Number,
     enum: [1, 5, 12],
     required: true,
@@ -24,9 +25,13 @@ const ContestSchema = new mongoose.Schema({
     type: Number,
     default: 1,
   },
-});
+  status: {
+    type: String,
+    enum: ["created", "active", "completed"],
+    default: "created",
+  },
+  createdAt: { type: Date, default: Date.now },
+},{timestamps:true});
 
-const CarPart = mongoose.model("CarPart", CarPartSchema);
-const Room = mongoose.model("Room", RoomSchema);
-const User = mongoose.model("User", UserSchema);
-const Contest = mongoose.model("Contest", ContestSchema);
+const ContestModel = mongoose.model("Contest", ContestSchema);
+module.exports=ContestModel

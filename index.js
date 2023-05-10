@@ -8,6 +8,8 @@ const errorHandler = require("./middleware/errorHandler");
 const userRouter = require("./routes/userRouter");
 const path=require("path");
 const carPartsRouter = require("./routes/carPartsRouter");
+const contestRouter = require("./routes/contestRouter");
+const roomRouter = require("./routes/roomRouter");
 dotenv.config();
 require("./db/index")
 const corsOption = {
@@ -27,6 +29,10 @@ app.use(express.static(path.join(__dirname, "public")));
 //route
 app.use("/api/user", userRouter);
 app.use("/api/carParts", carPartsRouter);
+app.use("/api/contest", contestRouter);
+app.use("/api/room", roomRouter);
+
+
 
 
 app.get("/", (req, res) => {
@@ -39,5 +45,5 @@ app.use((req, res, next) => {
 app.use(errorHandler)
 //server 
 app.listen(5000,()=>{
-console.log(`server is running.. 5000`);
+console.log(`server is running.. 5000 `);
 })

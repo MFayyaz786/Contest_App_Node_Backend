@@ -1,19 +1,22 @@
 const express = require("express");
 const expressAsyncHandler = require("express-async-handler");
-const roomService = require("../services/roomService");
+const roomServices = require("../services/roomServices");
+const roomModel = require("../models/roomModel");
+const contestServices = require("../services/contestServices");
+const OTP = require("../utils/OTP");
 const roomRouter = express.Router();
 roomRouter.get(
   "/all",
   expressAsyncHandler(async (req, res) => {
-    const result = await roomService.get();
+    const result = await roomServices.get();
     res.status(200).send({ msg: "Rooms", data: result });
   })
 );
 roomRouter.get(
   "/details",
   expressAsyncHandler(async (req, res) => {
-    let { partId } = req.query;
-    const result = await roomService.getByID(partId);
+    let { roomId } = req.query;
+    const result = await roomServices.getByID(roomId);
     if (result) {
       return res.status(200).send({ msg: "Room", data: result });
     } else {
@@ -24,8 +27,18 @@ roomRouter.get(
 roomRouter.post(
   "/",
   expressAsyncHandler(async (req, res) => {
-    const { name } = req.body;
-    const result = await roomService.addNew(name);
+    const { contestId,name } = req.body;
+    if(!contestId||!name){
+      return res.status(400).send({msg:"Fields Missing"})
+    }
+    const contest=await contestServices.isContest(contestId);
+    const countRooms=await roomModel.countDocuments({contestId:contestId});
+    console.log(countRooms);
+    if (!contest || countRooms > contest.roomsPerContest) {
+      return res.status(400).send({ msg: "Contest rooms are completed!" });
+    }
+    console.log(countRooms);
+    const result = await roomServices.addNew(contestId, name);
     if (result) {
       return res.status(201).send({
         msg: "Room created",
@@ -36,11 +49,42 @@ roomRouter.post(
     }
   })
 );
-roomRouter.patch(
-  "/",
+roomRouter.post(
+  "/rooms",
   expressAsyncHandler(async (req, res) => {
-    const { partId, name } = req.body;
-    const result = await roomService.update(partId, name);
+    const { contestId } = req.body;
+    if (!contestId) {
+      return res.status(400).send({ msg: "Fields Missing" });
+    }
+    const contest = await contestServices.isContest( contestId );
+    const countRooms = await roomModel.countDocuments({ contestId: contestId });
+    if (!contest || countRooms >= contest.roomsPerContest) {
+      return res.status(400).send({ msg: "Contest rooms are completed!" });
+    }
+    const result = await roomServices.createRooms(
+      contestId,
+      contest.roomsPerContest - countRooms
+    );
+    if (result) {
+      return res.status(201).send({
+        msg: "Rooms created",
+        data: result,
+      });
+    } else {
+      return res.status(400).send({ msg: "Failed to create rooms" });
+    }
+  })
+);
+roomRouter.patch(
+  "/joinRoom",
+  expressAsyncHandler(async (req, res) => {
+    const { userId,contestId,roomId,carPart } = req.body;
+    const isAvailable=await contestServices.isContest(contestId);
+    if(!isAvailable){
+      return res.status(400).send({ msg: "This room contest has been started please join other!" });
+    }
+    const isJoined=await roomServices.isJoined(userId,contestId,roomId,carPart)
+    const result = await roomServices.update(contestId,roomId,carPart);
     if (result) {
       return res.status(200).send({ msg: "Updated", data: result });
     } else {
@@ -51,11 +95,11 @@ roomRouter.patch(
 roomRouter.delete(
   "/",
   expressAsyncHandler(async (req, res) => {
-    const { partId } = req.query;
-    if (!partId) {
+    const { roomId } = req.query;
+    if (!roomId) {
       return res.status(400).send({ msg: "Fields Missing" });
     }
-    const result = await roomService.delete(partId);
+    const result = await roomServices.delete(roomId);
     if (result.deletedCount == 0) {
       return res.status(400).send({ msg: "ID Not found" });
     }

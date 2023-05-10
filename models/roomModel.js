@@ -1,6 +1,10 @@
 const { default: mongoose } = require("mongoose");
 
 const RoomSchema = new mongoose.Schema({
+  contestId:{
+    type:mongoose.Types.ObjectId,
+    ref:"Contest"
+  },
   name: {
     type: String,
     required: true,
@@ -8,11 +12,11 @@ const RoomSchema = new mongoose.Schema({
   participants: [
     {
       userId: {
-        type: mongoose.Schema.Types.ObjectId,
+        type: mongoose.Types.ObjectId,
         ref: "User",
       },
       carPart: {
-        type: mongoose.Schema.Types.ObjectId,
+        type: mongoose.Types.ObjectId,
         ref: "CarPart",
       },
     }
@@ -24,10 +28,6 @@ const RoomSchema = new mongoose.Schema({
   currentParticipants: {
     type: Number,
     default: 0,
-  },
-  isFull: {
-    type: Boolean,
-    default: false,
   },
   isCompleted: {
     type: Boolean,
