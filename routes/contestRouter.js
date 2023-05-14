@@ -1,6 +1,7 @@
 const express = require("express");
 const expressAsyncHandler = require("express-async-handler");
 const contestServices = require("../services/contestServices");
+const roomServices = require("../services/roomServices");
 const contestRouter = express.Router();
 contestRouter.get(
   "/all",
@@ -12,6 +13,7 @@ contestRouter.get(
 contestRouter.get(
   "/current",
   expressAsyncHandler(async (req, res) => {
+    //const {page}=req.query;
     const result = await contestServices.currentContest();
     res.status(200).send({ msg: "Contests", data: result });
   })
@@ -31,16 +33,36 @@ contestRouter.get(
 contestRouter.post(
   "/",
   expressAsyncHandler(async (req, res) => {
-    const { contestSpace } = req.body;
-    const result = await contestServices.addNew(contestSpace);
+    const {contestSpace } = req.body;
+    // try{
+    // const isContest = await contestServices.isContestCreated(
+    //   page,
+    //   5
+    // );
+    // if(isContest){
+    //   return res.status(200).send({msg:"Contest",data:isContest})
+    // }else{
+    const result = await contestServices.addNew(40);
+    console.log(result);
     if (result) {
+      const rooms = await roomServices.createRooms(
+        result._id,
+        result.roomsPerContest,
+        result.currentRound,
+      );
+      if(rooms){
       return res.status(201).send({
         msg: "Contest created",
         data: result,
       });
+    }
     } else {
       return res.status(400).send({ msg: "Failed to create" });
     }
+  //}
+  // }catch(error){
+  //   console.log(error);
+  // }
   })
 );
 contestRouter.patch(

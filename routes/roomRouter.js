@@ -13,6 +13,13 @@ roomRouter.get(
   })
 );
 roomRouter.get(
+  "/current",
+  expressAsyncHandler(async (req, res) => {
+    const result = await roomServices.get();
+    res.status(200).send({ msg: "Rooms", data: result });
+  })
+);
+roomRouter.get(
   "/details",
   expressAsyncHandler(async (req, res) => {
     let { roomId } = req.query;
@@ -79,14 +86,47 @@ roomRouter.patch(
   "/joinRoom",
   expressAsyncHandler(async (req, res) => {
     const { userId,contestId,roomId,carPart } = req.body;
-    const isAvailable=await contestServices.isContest(contestId);
+    if(!userId||!contestId||!roomId||!carPart){
+      return res.status(400).send({msg:"Fields missing!"})
+    }
+    const isAvailable=await contestServices.isContest(contestId); 
     if(!isAvailable){
       return res.status(400).send({ msg: "This room contest has been started please join other!" });
     }
-    const isJoined=await roomServices.isJoined(userId,contestId,roomId,carPart)
-    const result = await roomServices.update(contestId,roomId,carPart);
+    const isRooFull=await roomServices.isRoomFull(contestId,roomId)
+    if (isRooFull) {
+      return res
+        .status(400)
+        .send({ msg: "This room is complete please join other!" });
+    }
+    const isJoined=await roomServices.isJoined(contestId,roomId,userId);
+    if(isJoined){
+      return res
+        .status(400)
+        .send({ msg: "You have joined already this room please try other!" });
+    }
+    const isCarPart=await roomServices.isCarPart(contestId,roomId,carPart);
+    if (isCarPart) {
+      return res
+        .status(400)
+        .send({ msg: "Already selected car part for this room please try other!" });
+    }
+    const isVotedCarPart=await roomServices.isVotedCarPart(contestId,userId,carPart);
+    if(isVotedCarPart){
+      return res
+        .status(400)
+        .send({
+          msg: "You have joined already for this car part please try other!",
+        });
+    }
+    const result = await roomServices.update(
+      roomId,
+      contestId,
+      userId,
+      carPart
+    );
     if (result) {
-      return res.status(200).send({ msg: "Updated", data: result });
+      return res.status(200).send({ msg: "You have  joined the room", data: result });
     } else {
       return res.status(400).send({ msg: "Failed!" });
     }

@@ -10,11 +10,15 @@ const path=require("path");
 const carPartsRouter = require("./routes/carPartsRouter");
 const contestRouter = require("./routes/contestRouter");
 const roomRouter = require("./routes/roomRouter");
+const votingRouter = require("./routes/votingRouter");
+const  cronJob  = require("./utils/updateContestRoomCount");
 dotenv.config();
 require("./db/index")
 const corsOption = {
   origin: "*",
 };
+
+//cronJob()
 //hit routes
 app.use((req, res, next) => {
   console.log(`Route called: ${req.originalUrl}`);
@@ -31,6 +35,8 @@ app.use("/api/user", userRouter);
 app.use("/api/carParts", carPartsRouter);
 app.use("/api/contest", contestRouter);
 app.use("/api/room", roomRouter);
+app.use("/api/voting", votingRouter);
+
 
 
 

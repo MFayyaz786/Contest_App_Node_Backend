@@ -9,6 +9,10 @@ const RoomSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  round:{
+    type:Number,
+    default:1
+  },
   participants: [
     {
       userId: {
@@ -23,7 +27,7 @@ const RoomSchema = new mongoose.Schema({
   ],
   maxParticipants: {
     type: Number,
-    default: 4,
+    default: 2,
   },
   currentParticipants: {
     type: Number,
@@ -33,6 +37,6 @@ const RoomSchema = new mongoose.Schema({
     type: Boolean,
     default: false,
   },
-});
+},{timestamps:true});
 const roomModel=mongoose.model("Room",RoomSchema);
 module.exports=roomModel
