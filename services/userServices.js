@@ -12,6 +12,28 @@ const userServices = {
     const result = await userModel.find({}, projection.basicProjection);
     return result;
   },
+  saveJoinedRoom:async(userId,contestId,page)=>{
+    try {
+    const result = await userModel.findOneAndUpdate(
+      { _id: userId },
+      {
+        $addToSet: {
+          joinedContests: {
+            contest: contestId,
+            page: page,
+          },
+        },
+      },
+      { new: true }
+    );
+
+    return result;
+  } catch (error) {
+    // Handle error
+    console.error(error);
+    throw error;
+  }
+  },
   isUser: async (email) => {
     const result = await userModel.findOne(
       { email },
@@ -40,7 +62,7 @@ const userServices = {
       .lean();
     if (user) {
       const uuid = uuidv4;
-      const refreshToken = jwtServices.create({ uuid, type: "user" });
+      //const refreshToken = jwtServices.create({ uuid, type: "user" });
       const accessToken = jwtServices.create(
         { userId: user._id, type: "user" },
         "5m"
@@ -51,7 +73,7 @@ const userServices = {
         { token: accessToken }
       );
       user.accessToken = accessToken;
-      user.refreshToken = refreshToken;
+     // user.refreshToken = refreshToken;
     }
     return user;
   },

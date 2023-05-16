@@ -5,9 +5,11 @@ const votingSchema = new mongoose.Schema({
   contest: { type: mongoose.Schema.Types.ObjectId, ref: "Contest" },
   room: { type: mongoose.Schema.Types.ObjectId, ref: "Room" },
   carPart: { type: mongoose.Schema.Types.ObjectId, ref: "CarPart" },
-  voteCount:{type:Number, default:0 },
-  round:{type:Number,default:1},
-  winner:{type:Boolean,default:false}
+  image:{type:String},
+  voters: [mongoose.Types.ObjectId],
+  voteCount: { type: Number, default: 0 },
+  round: { type: Number, default: 1 },
+  winner: { type: Boolean, default: false },
   // Add more fields as needed
 });
 

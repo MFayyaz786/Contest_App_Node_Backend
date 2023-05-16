@@ -57,7 +57,7 @@ userRouter.post(
     );
     if (result) {
       const uuid = uuidv4;
-      const refreshToken = jwtServices.create({ uuid, type: "user" });
+     // const refreshToken = jwtServices.create({ uuid, type: "user" });
       const accessToken = jwtServices.create(
         { userId: result._id, type: "user" },
         "5m"
@@ -66,7 +66,6 @@ userRouter.post(
       return res.status(201).send({
         msg: "User Registered Successfully",
         data: result,
-        refreshToken,
         accessToken
       });
     } else {

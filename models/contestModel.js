@@ -7,18 +7,18 @@ const ContestSchema = new mongoose.Schema(
     },
     contestSpace: {
       type: Number,
-      enum: [40, 80, 100],
+      enum: [5, 25, 60],
       //contest space will be 5 or 35 or 60 hours
     },
     roundPerContest: {
       type: Number,
       required: true,
-      default: 2,
+      default: 5,
     },
     roomsPerContest: {
       type: Number,
       required: true,
-      default: 8,
+      default: 256,
     },
     currentParticipantsRooms: {
       type: Number,

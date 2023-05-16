@@ -8,13 +8,66 @@ const contestServices = {
     return result;
   },
   currentContest: async () => {
-    const result = await contestModel.find(
-      {
-       // page:{$eq:page},
-        $or:[{ status:{$eq: "created"}},{status:{$eq:'active'}}] },
-      projection.basicProjection
-    ).limit(3);
+    const result = await contestModel.aggregate([
+  {
+    '$match': {
+      'status': 'created'
+    }
+  }, {
+    '$lookup': {
+      'from': 'rooms', 
+      'localField': '_id', 
+      'foreignField': 'contestId', 
+      'let': {
+        'isCompleted': '$isCompleted'
+      }, 
+      'pipeline': [
+        {
+          '$match': {
+            '$expr': {
+              '$eq': [
+                '$isCompleted', false
+              ]
+            }
+          }
+        }
+      ], 
+      'as': 'rooms'
+    }
+  }, {
+    '$project': {
+      '_id': 1,
+      'currentRound':1,
+  'roundPerContest':1,
+  'currentParticipantsRooms':1,
+  'contestSpace':1,
+  'currentRound':1,
+  'status':1, 
+      'rooms': {
+        '$slice': [
+          '$rooms', 3
+        ]
+      }
+    }
+  }
+])
+    // find(
+    //   {
+    //    // page:{$eq:page},
+    //    // $or:[{
+    //        status:{$eq: "created"}},
+    //     //{status:{$eq:'active'}}] },
+    //   projection.basicProjection
+    // )
+    // .populate({
+      
+    // })
+    // .limit(3);
     return result;
+  },
+active:async()=>{
+const contests=await contestModel.find({status:{$eq:"active"}});
+return contests
   },
   getByID: async (_id) => {
     const result = await contestModel.findById(

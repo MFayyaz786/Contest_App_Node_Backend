@@ -4,6 +4,7 @@ const roomServices = require("../services/roomServices");
 const roomModel = require("../models/roomModel");
 const contestServices = require("../services/contestServices");
 const OTP = require("../utils/OTP");
+const userServices = require("../services/userServices");
 const roomRouter = express.Router();
 roomRouter.get(
   "/all",
@@ -15,7 +16,7 @@ roomRouter.get(
 roomRouter.get(
   "/current",
   expressAsyncHandler(async (req, res) => {
-    const result = await roomServices.get();
+    const result = await roomServices.current();
     res.status(200).send({ msg: "Rooms", data: result });
   })
 );
@@ -28,6 +29,44 @@ roomRouter.get(
       return res.status(200).send({ msg: "Room", data: result });
     } else {
       return res.status(404).send({ msg: "Room Not Found" });
+    }
+  })
+);
+roomRouter.get(
+  "/userActiveRoom",
+  expressAsyncHandler(async (req, res) => {
+    let { userId,contestId,page } = req.query;
+    const result = await roomServices.userActiveRoom(userId,contestId ,page);
+    if (result) {
+      return res.status(200).send({ msg: "Room", data: result });
+    } else {
+      return res.status(404).send({ msg: "Not Found" });
+    }
+  })
+);
+roomRouter.get(
+  "/joinedRoomDetails",
+  expressAsyncHandler(async (req, res) => {
+    let { userId,page } = req.query;
+    console.log(req.query)
+    const result = await roomServices.joinedRoomDetails(userId, page);
+    if (result) {
+      return res.status(200).send({ msg: "Details", data: result });
+    } else {
+      return res.status(404).send({ msg: "Not Found" });
+    }
+  })
+);
+roomRouter.get(
+  "/contestRooms",
+  expressAsyncHandler(async (req, res) => {
+    let { contestId } = req.query;
+    console.log(req.query);
+    const result = await roomServices.contestRooms(contestId);
+    if (result) {
+      return res.status(200).send({ msg: "Rooms", data: result });
+    } else {
+      return res.status(404).send({ msg: "Not Found" });
     }
   })
 );
@@ -85,8 +124,8 @@ roomRouter.post(
 roomRouter.patch(
   "/joinRoom",
   expressAsyncHandler(async (req, res) => {
-    const { userId,contestId,roomId,carPart } = req.body;
-    if(!userId||!contestId||!roomId||!carPart){
+    const { userId,contestId,roomId,carPart,image,page } = req.body;
+    if(!userId||!contestId||!roomId||!carPart||!image){
       return res.status(400).send({msg:"Fields missing!"})
     }
     const isAvailable=await contestServices.isContest(contestId); 
@@ -123,15 +162,19 @@ roomRouter.patch(
       roomId,
       contestId,
       userId,
-      carPart
+      carPart,
+      image,
+      page,
     );
     if (result) {
+      await userServices.saveJoinedRoom(userId,contestId,page)
       return res.status(200).send({ msg: "You have  joined the room", data: result });
     } else {
       return res.status(400).send({ msg: "Failed!" });
     }
   })
 );
+
 roomRouter.delete(
   "/",
   expressAsyncHandler(async (req, res) => {

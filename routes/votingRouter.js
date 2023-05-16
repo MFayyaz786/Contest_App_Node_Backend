@@ -26,27 +26,27 @@ votingRouter.get(
 );
 
 votingRouter.post(
-  "/",
+  "/castVote",
   expressAsyncHandler(async (req, res) => {
-    const { user, contest, room, carPart } = req.body;
-    const isVote=await votingServices.isVote(user,room);
+    const {userId , contestId, roomId, carPart } = req.body;
+    const isVote=await votingServices.isVote(userId,roomId);
     if(isVote){
     return res.status(400).send({msg:'you have voted already for this room!'})
     }
-    const result = await votingServices.createVoting(user, contest, room, carPart);
+    const result = await votingServices.createVoting(userId , contestId, roomId, carPart);
     if (result) {
-      return res.status(201).send({ msg: "Voting Created", data: result });
+      return res.status(200).send({ msg: "Success", data: result });
     } else {
-      return res.status(400).send({ msg: "Failed to create voting" });
+      return res.status(400).send({ msg: "Failed!" });
     }
   })
 );
 
 votingRouter.patch(
-  "/",
+  "/castVote",
   expressAsyncHandler(async (req, res) => {
-    const { votingId, user, contest, room, carPart } = req.body;
-    const result = await votingServices.updateVoting( user, contest, room, carPart);
+    const {  contest, room, carPart } = req.body;
+    const result = await votingServices.updateVoting(contest, room, carPart);
     if (result) {
       return res.status(200).send({ msg: "Voting Updated", data: result });
     } else {
@@ -54,7 +54,18 @@ votingRouter.patch(
     }
   })
 );
-
+votingRouter.get(
+  "/toppers",
+  expressAsyncHandler(async (req, res) => {
+    let { contestId, round } = req.query;
+    const result = await votingServices.toppers(contestId, round);
+    if (result) {
+      return res.status(200).send({ msg: "Room", data: result });
+    } else {
+      return res.status(404).send({ msg: "Room Not Found" });
+    }
+  })
+);
 votingRouter.delete(
   "/",
   expressAsyncHandler(async (req, res) => {

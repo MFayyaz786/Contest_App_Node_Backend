@@ -60,6 +60,15 @@ const schema = new Schema(
       type: Number,
       default: 0,
     },
+    joinedContests:[{
+      contest:{
+        type:Schema.Types.ObjectId,
+        ref:"Contest"
+      },
+      page:{
+        type:Number
+      }
+    }]
   },
   { timestamps: true }
 );

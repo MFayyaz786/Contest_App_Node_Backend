@@ -19,6 +19,14 @@ contestRouter.get(
   })
 );
 contestRouter.get(
+  "/active",
+  expressAsyncHandler(async (req, res) => {
+    //const {page}=req.query;
+    const result = await contestServices.active();
+    res.status(200).send({ msg: "Contests", data: result });
+  })
+);
+contestRouter.get(
   "/details",
   expressAsyncHandler(async (req, res) => {
     let { contestId } = req.query;

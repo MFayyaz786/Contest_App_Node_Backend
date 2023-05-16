@@ -18,7 +18,7 @@ const corsOption = {
   origin: "*",
 };
 
-//cronJob()
+// cronJob()
 //hit routes
 app.use((req, res, next) => {
   console.log(`Route called: ${req.originalUrl}`);
