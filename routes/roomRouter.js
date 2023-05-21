@@ -33,6 +33,30 @@ roomRouter.get(
   })
 );
 roomRouter.get(
+  "/roomByEngineer",
+  expressAsyncHandler(async (req, res) => {
+    let { engineer,round} = req.query;
+    const result = await roomServices.roomByEngineer(engineer,round);
+    if (result) {
+      return res.status(200).send({ msg: "Room", data: result });
+    } else {
+      return res.status(404).send({ msg: "Room Not Found" });
+    }
+  })
+);
+roomRouter.get(
+  "/votingRoom",
+  expressAsyncHandler(async (req, res) => {
+    let { page,srNo,space} = req.query;
+    const result = await roomServices.votingRoom(page, srNo, space);
+    if (result) {
+      return res.status(200).send({ msg: "Room", data: result });
+    } else {
+      return res.status(404).send({ msg: "Room Not Found" });
+    }
+  })
+);
+roomRouter.get(
   "/userActiveRoom",
   expressAsyncHandler(async (req, res) => {
     let { userId,contestId,page } = req.query;
@@ -124,9 +148,16 @@ roomRouter.post(
 roomRouter.patch(
   "/joinRoom",
   expressAsyncHandler(async (req, res) => {
-    const { userId,contestId,roomId,carPart,image,page } = req.body;
-    if(!userId||!contestId||!roomId||!carPart||!image){
-      return res.status(400).send({msg:"Fields missing!"})
+    const { userId,contestId,roomId,engineerName,carPart,image,page } = req.body;
+    if (
+      !userId ||
+      !contestId ||
+      !roomId ||
+      !carPart ||
+      !image ||
+      !engineerName
+    ) {
+      return res.status(400).send({ msg: "Fields missing!" });
     }
     const isAvailable=await contestServices.isContest(contestId); 
     if(!isAvailable){
@@ -165,6 +196,7 @@ roomRouter.patch(
       carPart,
       image,
       page,
+      engineerName
     );
     if (result) {
       await userServices.saveJoinedRoom(userId,contestId,page)

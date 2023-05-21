@@ -4,21 +4,22 @@ const ContestSchema = new mongoose.Schema(
     page: {
       type: Number,
       enum: [1, 2, 3, 4, 5, 6],
+      default:1,
     },
     contestSpace: {
       type: Number,
-      enum: [5, 25, 60],
+      enum: [40, 25, 60],
       //contest space will be 5 or 35 or 60 hours
     },
     roundPerContest: {
       type: Number,
       required: true,
-      default: 5,
+      default: 3,
     },
     roomsPerContest: {
       type: Number,
       required: true,
-      default: 256,
+      default: 4,
     },
     currentParticipantsRooms: {
       type: Number,

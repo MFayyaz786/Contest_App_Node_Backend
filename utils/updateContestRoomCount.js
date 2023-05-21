@@ -109,7 +109,8 @@ const task = cron.schedule(`*/${roundSpace} * * * *`, taskCallback);
          contestId,
          room._id.toString(),
          topper.user.toString(),
-         topper.carPart.toString(),
+         topper.carPart,
+         topper.engineerName,
          topper.image,
          topper.page
        );
@@ -118,6 +119,7 @@ const task = cron.schedule(`*/${roundSpace} * * * *`, taskCallback);
          room._id,
          topper.user,
          topper.carPart,
+         topper.engineerName,
          topper.image,
          currentRound + 1
        );
@@ -157,6 +159,7 @@ const joiningNextRoundRoom = async (
   _id,
   userId,
   carPart,
+  engineerName,
   image,
   page
 ) => {
@@ -168,6 +171,7 @@ const joiningNextRoundRoom = async (
           page: page,
           userId: userId,
           carPart: carPart,
+          engineerName:engineerName,
           image: image,
         },
       },
@@ -180,12 +184,13 @@ const joiningNextRoundRoom = async (
   }
   return result;
 };
-const createNewVotingDocs = async (contestId, _id, userId, carPart,image, round) => {
+const createNewVotingDocs = async (contestId, _id, userId, carPart,engineerName,image, round) => {
   const newVote = new votingModel({
     user: userId,
     contest: contestId,
     room: _id,
     carPart: carPart,
+    engineerName:engineerName,
     image:image,
     round: round,
   });
@@ -244,14 +249,36 @@ async function getTopVoterParticipants(result) {
           index !== participants.length - 1 &&
           participant.voteCount === participants[index + 1].voteCount
       );
-      if (hasEqualVotes) {
-        return false;
-      }
+       if (hasEqualVotes) {
+         // Filter participants with equal votes
+         const participantsWithEqualVotes = sortedParticipants.filter(
+           (participant, index, participants) =>
+             index !== participants.length - 1 &&
+             participant.voteCount === participants[index + 1].voteCount
+         );
+
+         // Sort participants by updatedAt field in ascending order
+         const sortedByUpdatedAt = participantsWithEqualVotes.sort(
+           (a, b) => new Date(a.updatedAt) - new Date(b.updatedAt)
+         );
+
+         // Return any one of the participants with equal votes and nearest updatedAt time
+         return sortedByUpdatedAt[0];
+       }
+
+       // Get the participants with the highest vote count
+       const highestVoteCount = sortedParticipants[0].voteCount;
+       const topVoters = sortedParticipants.filter(
+         (participant) => participant.voteCount === highestVoteCount
+       );
+      // if (hasEqualVotes) {
+      //   return false;
+      // }
       // Get the participants with the highest vote count
-      const highestVoteCount = sortedParticipants[0].voteCount;
-      const topVoters = sortedParticipants.filter(
-        (participant) => participant.voteCount === highestVoteCount
-      );
+      // const highestVoteCount = sortedParticipants[0].voteCount;
+      // const topVoters = sortedParticipants.filter(
+      //   (participant) => participant.voteCount === highestVoteCount
+      // );
 
       // Return the top voter participant
       return {
@@ -264,13 +291,13 @@ async function getTopVoterParticipants(result) {
       };
     });
 
-    // Check if any room has two participants with equal votes
-    const hasEqualVotes = topVoterParticipants.includes(false);
+    // // Check if any room has two participants with equal votes
+    // const hasEqualVotes = topVoterParticipants.includes(false);
 
-    // If any room has two participants with equal votes, return false
-    if (hasEqualVotes) {
-      return false;
-    }
+    // // If any room has two participants with equal votes, return false
+    // if (hasEqualVotes) {
+    //   return false;
+    // }
     return topVoterParticipants;
   } catch (error) {
     // Handle error

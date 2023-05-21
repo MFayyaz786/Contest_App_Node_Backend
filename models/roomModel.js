@@ -6,6 +6,9 @@ const RoomSchema = new mongoose.Schema(
       type: mongoose.Types.ObjectId,
       ref: "Contest",
     },
+    srNo:{
+      type:Number
+    },
     name: {
       type: String,
       required: true,
@@ -19,14 +22,20 @@ const RoomSchema = new mongoose.Schema(
         page: {
           type: Number,
         },
+        engineerName: {
+          type: String,
+        },
         userId: {
           type: mongoose.Types.ObjectId,
           ref: "User",
         },
         carPart: {
-          type: mongoose.Types.ObjectId,
-          ref: "CarParts",
+          type: String,
         },
+        // carPart: {
+        //   type: mongoose.Types.ObjectId,
+        //   ref: "CarParts",
+        // },
         image: {
           type: String,
           default: "images/profile.png",
@@ -35,7 +44,7 @@ const RoomSchema = new mongoose.Schema(
     ],
     maxParticipants: {
       type: Number,
-      default: 4,
+      default: 2,
     },
     currentParticipants: {
       type: Number,

@@ -94,14 +94,14 @@ userActiveRoom:async(userId,contestId,page)=>{
      "participants.userId": userId,
      "participants.page": page,
    })
-   .populate([
+   .populate(
      {
        path: "contestId", // Specify the fields you want to select from the populated document
      },
-     {
-       path: "participants.carPart", // Specify the fields you want to select from the populated document
-     },
-   ]);
+    //  {
+    //    path: "participants.carPart", // Specify the fields you want to select from the populated document
+    //  },
+   );
    if(result){
     return result
    }else{
@@ -113,7 +113,48 @@ userActiveRoom:async(userId,contestId,page)=>{
     return false
   }
   },
-  
+
+ roomByEngineer : async (engineerName, round) => {
+  try {
+    const rooms = await roomModel
+      .find({ "participants.engineerName": engineerName, round: round })
+      .populate({ path: "participants.userId" ,select:{name:1,contact:1,image:1}})
+      .limit(4) // Limit the number of results to 4
+      .sort({ createdAt: -1 }); // Sort the results by createdAt field in descending order
+    if (rooms.length > 3) {
+      // If there are more than 3 results, return only the first 3
+      return rooms.slice(0, 3);
+    } else {
+      return rooms;
+    }
+  } catch (error) {
+    console.error("Error searching rooms:", error);
+    throw error;
+  }
+},
+votingRoom:async(page,srNo,space)=>{
+  const contest = await ContestModel.findOne({
+    page:1,
+    contestSpace:{$eq:40},
+   status: { $eq: "active" },
+  });
+  console.log(srNo);
+  if(contest){
+    const room = await roomModel
+      .findOne({
+        contestId: contest._id,
+        round: contest.currentRound,
+        srNo: srNo,
+      })
+      .populate({
+        path: "participants.userId",
+        select: { name: 1, contact: 1, image: 1 },
+      });
+    return room;
+  }else{
+    return false
+  }
+},
   isJoined: async (contestId, _id, userId) => {
     const result = await roomModel.findOne({
       _id,
@@ -143,10 +184,12 @@ userActiveRoom:async(userId,contestId,page)=>{
     const session = await mongoose.startSession();
     try {
       session.startTransaction();
+       const combinations = getCombinations(currentRound);
+    //const roomCount = Math.min(roomsLimit, combinations.length);
       for (var i = 0; i < roomsLimit; i++) {
-        let name = OTP();
-        name = `Contest-${name}`;
+        const name = combinations[i];
         user = new roomModel({
+          srNo:i,
           contestId,
           name,
           round: currentRound,
@@ -173,7 +216,7 @@ userActiveRoom:async(userId,contestId,page)=>{
     });
     return result;
   },
-  update: async (_id, contestId, userId, carPart, image, page) => {
+  update: async (_id, contestId, userId, carPart, image, page,engineerName) => {
     if (image) {
       image = await uploadFile(image);
     }
@@ -184,6 +227,7 @@ userActiveRoom:async(userId,contestId,page)=>{
         $push: {
           participants: {
             page: page,
+            engineerName:engineerName,
             userId: userId,
             carPart: carPart,
             image: image,
@@ -263,5 +307,55 @@ async function removeContestAndPage(userId, contestId, page) {
     console.error(error);
     throw error;
   }
+}
+const getCombinations = (round) => {
+  const combinations = [];
+  switch (round) {
+    case 1:
+      for (let i = 0; i < 256; i++) {
+          let first=5;
+        const suffix = String.fromCharCode(65 + (i % 26));
+        const suffixIteration = Math.floor(i / 26) + 1;
+       const  alpha=choseAlphbet(first+suffixIteration)
+        combinations.push(`${alpha}${suffix}`);
+      }
+      break;
+    case 2:
+      for (let i = 0; i < 64; i++) {
+          let first=2;
+        const suffix = String.fromCharCode(65 + (i % 26));
+         const suffixIteration = Math.floor(i / 26) + 1;
+       const  alpha=choseAlphbet(first+suffixIteration)
+        combinations.push(`${alpha}${suffix}`);
+      }
+      break;
+    case 3:
+      for (let i = 0; i < 16; i++) {
+        const prefix = String.fromCharCode(65 + Math.floor(i / 26));
+        const suffix = String.fromCharCode(65 + (i % 26));
+        combinations.push(`C${suffix}`);
+      }
+      break;
+    case 4:
+      for (let i = 0; i < 4; i++) {
+        const prefix = String.fromCharCode(65 + Math.floor(i / 26));
+        const suffix = String.fromCharCode(65 + (i % 26));
+        combinations.push(`B${suffix}`);
+      }
+      break;
+    case 5:
+      combinations.push('AA');
+      break;
+    default:
+      break;
+  }
+  
+  return combinations;
+};
+const choseAlphbet=(select)=>{
+const alphabets = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'];
+
+const selectedAlphabet = alphabets[select];
+return selectedAlphabet;
 }
 module.exports = roomServices;
