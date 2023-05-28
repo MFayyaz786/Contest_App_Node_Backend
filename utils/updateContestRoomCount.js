@@ -4,6 +4,7 @@ const cron = require("node-cron");
 const votingServices = require("../services/votingServices");
 const roomServices = require("../services/roomServices");
 const roomModel = require("../models/roomModel");
+const userModel = require("../models/userModel");
 const votingModel = require("../models/votingModel");
 const OTP = require("./OTP");
 const { default: mongoose } = require("mongoose");
@@ -14,35 +15,58 @@ const updateContestRoomCount = async (contestId) => {
     { new: true }
   );
   if (result && result.currentParticipantsRooms === result.roomsPerContest) {
-    Promise.all([
-      await ContestModel.findOneAndUpdate(
-        { _id: contestId },
-        { status: "active" }
-      ),
-      await cronJob(
-        contestId,
-        result.contestSpace,
-        result.roundPerContest,
-        result.roomsPerContest
-      ),
-    ]);
-    return result;
+    //if (result.contestSpace === 40) {
+      await Promise.all([
+        ContestModel.findOneAndUpdate({ _id: contestId }, { status: "active",startTime:new Date()}),
+        await createNewContest(result.contestSpace),
+        // cronJob1(
+        //   contestId,
+        //   result.contestSpace,
+        //   result.roundPerContest,
+        //   result.roomsPerContest
+        // ),
+      ]);
+   // } 
+    // else if (result.contestSpace === 50) {
+    //   await Promise.all([
+    //     ContestModel.findOneAndUpdate({ _id: contestId }, { status: "active" }),
+    //     await createNewContest(result.contestSpace),
+    //     cronJob2(
+    //       contestId,
+    //       result.contestSpace,
+    //       result.roundPerContest,
+    //       result.roomsPerContest
+    //     ),
+    //   ]);
+    // } else {
+    //   await Promise.all([
+    //     ContestModel.findOneAndUpdate({ _id: contestId }, { status: "active" }),
+    //     await createNewContest(result.contestSpace),
+    //     cronJob3(
+    //       contestId,
+    //       result.contestSpace,
+    //       result.roundPerContest,
+    //       result.roomsPerContest
+    //     ),
+    //   ]);
+    // }
   }
+  return result;
 };
-const cronJob = async (
+const cronJob1 = async (
   contestId,
   contestSpace,
   roundPerContest,
   roomsPerContest
 ) => {
-  console.log(contestId, contestSpace, roundPerContest, roomsPerContest);
-  let currentRound = 1;
-  let repetitions = 1;
-  const maxRepetitions = roundPerContest;
+  console.log(contestId, contestSpace, roundPerContest);
+  // console.log(contestId, contestSpace, roundPerContest, roomsPerContest);
+   let currentRound = 1;
+   let repetitions = 1;
+   const maxRepetitions = roundPerContest;
   const roundPerContests = roundPerContest;
   let roundSpace = contestSpace/5;
- const taskCallback= async () => {
-  //const contestId = "64632d0c58c460afe5d926ce";
+  const taskCallback1= async () => {
      await ContestModel.findOneAndUpdate({_id:contestId},{$inc:{currentRound:1}},{new:true})
     console.log(currentRound, repetitions);
     const completedRooms = await roomModel.countDocuments({
@@ -62,7 +86,8 @@ const cronJob = async (
       }
     }
     if (repetitions >= maxRepetitions) {
-      await ContestModel.updateOne({ _id: contestId }, { status: "completed" });
+      Promise.all([
+      await ContestModel.updateOne({ _id: contestId }, { status: "completed" }),
       await votingModel.updateOne(
         {
           contest:contestId,
@@ -71,25 +96,25 @@ const cronJob = async (
           carPart: toppers[0].carPart,
         },
         { winner: true }
-      );
-
+      ),
+      await removeContestEntryByContestId(contestId, toppers[0].page)])
       task.stop();
       console.log(
         "Cron job stopped after reaching the maximum number of repetitions."
       );
     }
-    console.log("Cron job executed!");
+    console.log("Cron job executed! 1");
     currentRound++;
     repetitions++;
   };
-const task = cron.schedule(`*/${roundSpace} * * * *`, taskCallback);
-  // Store the parameter values in local variables
+const task = cron.schedule(`*/${roundSpace} * * * *`, taskCallback1);
+ // Store the parameter values in local variables
   const storedContestId = contestId;
   const storedCurrentRound = currentRound;
   const storedRoundPerContest = roundPerContests;
   const storedRoomsPerContest = maxRepetitions;
 
-  // Access the stored parameter values during subsequent repetitions
+//  Access the stored parameter values during subsequent repetitions
   task.on("run", () => {
     console.log("Stored Contest ID:", storedContestId);
     console.log("Stored Current Round:", storedCurrentRound);
@@ -97,6 +122,192 @@ const task = cron.schedule(`*/${roundSpace} * * * *`, taskCallback);
     console.log("Stored Rooms Per Contest:", storedRoomsPerContest);
   });
 };
+const cronJob2 = async (
+  contestId,
+  contestSpace,
+  roundPerContest,
+  roomsPerContest
+) => {
+  console.log(contestId, contestSpace, roundPerContest);
+  // console.log(contestId, contestSpace, roundPerContest, roomsPerContest);
+  let currentRound = 1;
+  let repetitions = 1;
+  const maxRepetitions = roundPerContest;
+  const roundPerContests = roundPerContest;
+  let roundSpace = contestSpace / 5;
+  const taskCallback2 = async () => {
+    await ContestModel.findOneAndUpdate(
+      { _id: contestId },
+      { $inc: { currentRound: 1 } },
+      { new: true }
+    );
+    console.log(currentRound, repetitions);
+    const completedRooms = await roomModel.countDocuments({
+      contestId,
+      round: currentRound,
+    });
+    const toppers = await topVotesList(contestId, currentRound);
+    console.log(toppers);
+    if (currentRound < maxRepetitions) {
+      const createNewRooms = await createRooms(
+        contestId,
+        completedRooms / 2,
+        currentRound + 1
+      );
+      if (createNewRooms.length !== 0) {
+        await createNewRoomAndModify(
+          contestId,
+          createNewRooms,
+          toppers,
+          currentRound
+        );
+      }
+    }
+    if (repetitions >= maxRepetitions) {
+      Promise.all([
+        await ContestModel.updateOne(
+          { _id: contestId },
+          { status: "completed" }
+        ),
+        await votingModel.updateOne(
+          {
+            contest: contestId,
+            user: toppers[0].user,
+            room: toppers[0].roomId,
+            carPart: toppers[0].carPart,
+          },
+          { winner: true }
+        ),
+        await removeContestEntryByContestId(contestId, toppers[0].page),
+      ]);
+      task.stop();
+      console.log(
+        "Cron job stopped after reaching the maximum number of repetitions."
+      );
+    }
+    console.log("Cron job executed! 2");
+    currentRound++;
+    repetitions++;
+  };
+  const task = cron.schedule(`*/${roundSpace} * * * *`, taskCallback2);
+  // Store the parameter values in local variables
+  const storedContestId = contestId;
+  const storedCurrentRound = currentRound;
+  const storedRoundPerContest = roundPerContests;
+  const storedRoomsPerContest = maxRepetitions;
+
+  //  Access the stored parameter values during subsequent repetitions
+  task.on("run", () => {
+    console.log("Stored Contest ID:", storedContestId);
+    console.log("Stored Current Round:", storedCurrentRound);
+    console.log("Stored Round Per Contest:", storedRoundPerContest);
+    console.log("Stored Rooms Per Contest:", storedRoomsPerContest);
+  });
+};
+const cronJob3 = async (
+  contestId,
+  contestSpace,
+  roundPerContest,
+  roomsPerContest
+) => {
+  console.log(contestId, contestSpace, roundPerContest);
+  // console.log(contestId, contestSpace, roundPerContest, roomsPerContest);
+  let currentRound = 1;
+  let repetitions = 1;
+  const maxRepetitions = roundPerContest;
+  const roundPerContests = roundPerContest;
+  let roundSpace = contestSpace / 5;
+  const taskCallback3 = async () => {
+    await ContestModel.findOneAndUpdate(
+      { _id: contestId },
+      { $inc: { currentRound: 1 } },
+      { new: true }
+    );
+    console.log(currentRound, repetitions);
+    const completedRooms = await roomModel.countDocuments({
+      contestId,
+      round: currentRound,
+    });
+    const toppers = await topVotesList(contestId, currentRound);
+    console.log(toppers);
+    if (currentRound < maxRepetitions) {
+      const createNewRooms = await createRooms(
+        contestId,
+        completedRooms / 2,
+        currentRound + 1
+      );
+      if (createNewRooms.length !== 0) {
+        await createNewRoomAndModify(
+          contestId,
+          createNewRooms,
+          toppers,
+          currentRound
+        );
+      }
+    }
+    if (repetitions >= maxRepetitions) {
+      Promise.all([
+        await ContestModel.updateOne(
+          { _id: contestId },
+          { status: "completed" }
+        ),
+        await votingModel.updateOne(
+          {
+            contest: contestId,
+            user: toppers[0].user,
+            room: toppers[0].roomId,
+            carPart: toppers[0].carPart,
+          },
+          { winner: true }
+        ),
+        await removeContestEntryByContestId(contestId, toppers[0].page),
+      ]);
+      task.stop();
+      console.log(
+        "Cron job stopped after reaching the maximum number of repetitions."
+      );
+    }
+    console.log("Cron job executed! 3");
+    currentRound++;
+    repetitions++;
+  };
+  const task = cron.schedule(`*/${roundSpace} * * * *`, taskCallback3);
+  // Store the parameter values in local variables
+  const storedContestId = contestId;
+  const storedCurrentRound = currentRound;
+  const storedRoundPerContest = roundPerContests;
+  const storedRoomsPerContest = maxRepetitions;
+
+  //  Access the stored parameter values during subsequent repetitions
+  task.on("run", () => {
+    console.log("Stored Contest ID:", storedContestId);
+    console.log("Stored Current Round:", storedCurrentRound);
+    console.log("Stored Round Per Contest:", storedRoundPerContest);
+    console.log("Stored Rooms Per Contest:", storedRoomsPerContest);
+  });
+};
+const createNewContest= async (contestSpace) => {
+  const  data = new ContestModel({
+      contestSpace,
+    });
+    const result = await data.save();
+    if(result){
+    await createRooms(
+        result._id,
+        result.roomsPerContest,
+        1
+      );    }
+    return result;
+  };
+
+const removeContestEntryByContestId = async (contestId,page) => {
+    const users = await userModel.updateMany(
+      { "joinedContests.contest": contestId },
+      { $pull: { joinedContests: { contest: contestId, page : page } } }
+    );
+    return users; // Contest not found
+};
+
  const createNewRoomAndModify = async (contestId,createNewRooms, toppers,currentRound) => {
    createNewRooms.map(async (room, i) => {
      const topToppers = toppers.slice(
@@ -132,9 +343,9 @@ const createRooms = async (contestId, roomsLimit, currentRound) => {
   const session = await mongoose.startSession();
   try {
     session.startTransaction();
+    const combinations = getCombinations(currentRound);
     for (var i = 0; i < roomsLimit; i++) {
-      let name = OTP();
-      name = `Contest-${name}`;
+     const name = combinations[i];
       user = new roomModel({
         contestId,
         name,
@@ -303,5 +514,81 @@ async function getTopVoterParticipants(result) {
     // Handle error
   }
 }
+const getCombinations = (round) => {
+  const combinations = [];
+  switch (round) {
+    case 1:
+      for (let i = 0; i < 256; i++) {
+        let first = 5;
+        const suffix = String.fromCharCode(65 + (i % 26));
+        const suffixIteration = Math.floor(i / 26) + 1;
+        const alpha = choseAlphabet(first + suffixIteration);
+        combinations.push(`${alpha}${suffix}`);
+      }
+      break;
+    case 2:
+      for (let i = 0; i < 64; i++) {
+        let first = 2;
+        const suffix = String.fromCharCode(65 + (i % 26));
+        const suffixIteration = Math.floor(i / 26) + 1;
+        const alpha = choseAlphabet(first + suffixIteration);
+        combinations.push(`${alpha}${suffix}`);
+      }
+      break;
+    case 3:
+      for (let i = 0; i < 16; i++) {
+        const prefix = String.fromCharCode(65 + Math.floor(i / 26));
+        const suffix = String.fromCharCode(65 + (i % 26));
+        combinations.push(`C${suffix}`);
+      }
+      break;
+    case 4:
+      for (let i = 0; i < 4; i++) {
+        const prefix = String.fromCharCode(65 + Math.floor(i / 26));
+        const suffix = String.fromCharCode(65 + (i % 26));
+        combinations.push(`B${suffix}`);
+      }
+      break;
+    case 5:
+      combinations.push("AA");
+      break;
+    default:
+      break;
+  }
 
+  return combinations;
+};
+const choseAlphabet = (select) => {
+  const alphabets = [
+    "A",
+    "B",
+    "C",
+    "D",
+    "E",
+    "F",
+    "G",
+    "H",
+    "I",
+    "J",
+    "K",
+    "L",
+    "M",
+    "N",
+    "O",
+    "P",
+    "Q",
+    "R",
+    "S",
+    "T",
+    "U",
+    "V",
+    "W",
+    "X",
+    "Y",
+    "Z",
+  ];
+
+  const selectedAlphabet = alphabets[select];
+  return selectedAlphabet;
+};
 module.exports = updateContestRoomCount;

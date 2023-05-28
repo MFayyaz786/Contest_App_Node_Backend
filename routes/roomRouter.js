@@ -5,10 +5,13 @@ const roomModel = require("../models/roomModel");
 const contestServices = require("../services/contestServices");
 const OTP = require("../utils/OTP");
 const userServices = require("../services/userServices");
+const  cronJob  = require("../utils/updateContestRoomCount");
 const roomRouter = express.Router();
 roomRouter.get(
   "/all",
   expressAsyncHandler(async (req, res) => {
+    const {contest,spaceTime,maxRound}=req.body
+    cronJob(contest, spaceTime, maxRound);
     const result = await roomServices.get();
     res.status(200).send({ msg: "Rooms", data: result });
   })
